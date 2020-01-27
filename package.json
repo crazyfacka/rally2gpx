@@ -1,0 +1,22 @@
+{
+  "name": "rally2gpx",
+  "version": "1.0.0",
+  "description": "Convert coordinates from Rally web stuff to GPX",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crazyfacka/rally2gpx.git"
+  },
+  "author": "crazyfacka",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/crazyfacka/rally2gpx/issues"
+  },
+  "homepage": "https://github.com/crazyfacka/rally2gpx#readme",
+  "dependencies": {
+    "jsdom": "^16.0.1"
+  }
+}
