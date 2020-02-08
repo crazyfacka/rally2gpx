@@ -1,3 +1,5 @@
+*.gpx
+
 # Logs
 logs
 *.log

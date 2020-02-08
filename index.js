@@ -1,6 +1,10 @@
+const fs = require('fs');
 const jsdom = require('jsdom');
 const inquirer = require('inquirer');
+const { buildGPX, BaseBuilder } = require('gpx-builder');
+
 const { JSDOM } = jsdom;
+const { Point, Metadata, Person } = BaseBuilder.MODELS;
 
 const virtualConsole = new jsdom.VirtualConsole();
 virtualConsole.on('error', (err) => { console.log(err); });
@@ -48,7 +52,7 @@ const stagePicker = function (d) {
       {
         type: 'list',
         name: 'stage',
-        message: 'What stage do you wish to generate the GPX?',
+        message: 'What stage do you wish to generate the GPX',
         choices: choices,
         default: 0
       }
@@ -57,7 +61,50 @@ const stagePicker = function (d) {
 };
 
 const generateGPX = function (d) {
-  console.log(d);
+  const points = [];
+  const gpxData = new BaseBuilder();
+
+  let coordinates;
+
+  for (let i = 0; i < d.geometries.length; i++) {
+    if (d.geometries[i].type === 'SL') {
+      coordinates = d.geometries[i].geometry.coordinates;
+    }
+  }
+
+  for (let i = 0; i < coordinates.length; i++) {
+    points.push(new Point(coordinates[i][1], coordinates[i][0]));
+  }
+
+  gpxData.setMetadata(new Metadata({
+    name: d.name,
+    desc: `WRC track extracted for stage ${d.fullName}`,
+    author: new Person({
+      name: 'crazyfacka'
+    }),
+    time: `${new Date()}`
+  }));
+
+  gpxData.setSegmentPoints(points);
+
+  inquirer.prompt([
+    {
+      type: 'input',
+      name: 'filename',
+      message: 'Output GPX filename',
+      default: `${d.name.toLowerCase().replace(/ /gi, '_')}.gpx`,
+      filter: (input) => { return input.slice(-4) === '.gpx' ? input.toLowerCase().replace(/ /gi, '_') : `${input.toLowerCase().replace(/ /gi, '_')}.gpx`; }
+    }
+  ]).then(answers => {
+    fs.writeFile(answers.filename, buildGPX(gpxData.toObject()), 'utf8', (err) => {
+      if (err) {
+        console.log(`Error writing GPX data to ${answers.filename}`);
+        process.exit(1);
+      }
+
+      console.log(`${answers.filename} has been saved`);
+    });
+  });
 };
 
 /* THE MACHINE */
