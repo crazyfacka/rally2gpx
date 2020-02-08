@@ -96,7 +96,13 @@ const generateGPX = function (d) {
       filter: (input) => { return input.slice(-4) === '.gpx' ? input.toLowerCase().replace(/ /gi, '_') : `${input.toLowerCase().replace(/ /gi, '_')}.gpx`; }
     }
   ]).then(answers => {
-    fs.writeFile(answers.filename, buildGPX(gpxData.toObject()), 'utf8', (err) => {
+    const dir = './data';
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir);
+    }
+
+    fs.writeFile(`data/${answers.filename}`, buildGPX(gpxData.toObject()), 'utf8', (err) => {
       if (err) {
         console.log(`Error writing GPX data to ${answers.filename}`);
         process.exit(1);
