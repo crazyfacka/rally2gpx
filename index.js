@@ -6,7 +6,12 @@ virtualConsole.on('error', (err) => { console.log(err); });
 
 /* AUX FUNCTIONS */
 
-const checkData = function (dom) {
+const showHelp = function () {
+  const path = require('path');
+  console.log(`Usage: ${path.basename(process.argv[0])} ${path.basename(process.argv[1])} URL`);
+};
+
+const checkForData = function (dom) {
   return new Promise((resolve, reject) => {
     let count = 0;
     const check = setInterval(function (w) {
@@ -27,15 +32,21 @@ const checkData = function (dom) {
 
 /* THE MACHINE */
 
-console.log('Downloading and parsing data from URL');
+const args = process.argv.slice(2);
+if (args.length !== 1) {
+  showHelp();
+  process.exit(1);
+}
 
-JSDOM.fromURL('https://www.rally-maps.com/Rally-de-Portugal-2019/Vieira-do-Minho', {
+console.log(`Downloading and parsing data from '${args[0]}'`);
+
+JSDOM.fromURL(args[0], {
   includeNodeLocations: true,
   resources: 'usable',
   runScripts: 'dangerously',
   pretendToBeVisual: true,
   virtualConsole
-}).then(dom => checkData(dom))
+}).then(dom => checkForData(dom))
   .then(data => {
     console.log(data);
   }).catch(err => {
