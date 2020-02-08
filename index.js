@@ -21,10 +21,12 @@ const checkForData = function (dom) {
     let count = 0;
     const check = setInterval(function (w) {
       count++;
-      if (typeof w.sl.leaflet !== 'undefined') {
-        console.log(`Found ${w.sl.leaflet.data.storage.stages.length} tracks`);
-        clearInterval(check);
-        resolve(w.sl.leaflet);
+      if (typeof w.sl !== 'undefined') {
+        if (typeof w.sl.leaflet !== 'undefined') {
+          console.log(`Found ${w.sl.leaflet.data.storage.stages.length} tracks`);
+          clearInterval(check);
+          resolve(w.sl.leaflet);
+        }
       }
 
       if (count > 10) {
