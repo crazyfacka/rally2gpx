@@ -1,4 +1,5 @@
 const jsdom = require('jsdom');
+const inquirer = require('inquirer');
 const { JSDOM } = jsdom;
 
 const virtualConsole = new jsdom.VirtualConsole();
@@ -30,6 +31,35 @@ const checkForData = function (dom) {
   });
 };
 
+const stagePicker = function (d) {
+  return new Promise((resolve, reject) => {
+    const stages = d.data.storage.stages;
+    const choices = [];
+
+    for (let i = 0; i < stages.length; i++) {
+      choices[i] = {
+        value: i,
+        name: stages[i].fullName,
+        short: stages[i].fullName
+      };
+    }
+
+    inquirer.prompt([
+      {
+        type: 'list',
+        name: 'stage',
+        message: 'What stage do you wish to generate the GPX?',
+        choices: choices,
+        default: 0
+      }
+    ]).then(answers => resolve(stages[answers.stage]));
+  });
+};
+
+const generateGPX = function (d) {
+  console.log(d);
+};
+
 /* THE MACHINE */
 
 const args = process.argv.slice(2);
@@ -47,8 +77,8 @@ JSDOM.fromURL(args[0], {
   pretendToBeVisual: true,
   virtualConsole
 }).then(dom => checkForData(dom))
-  .then(data => {
-    console.log(data);
-  }).catch(err => {
+  .then(data => stagePicker(data))
+  .then(stage => generateGPX(stage))
+  .catch(err => {
     console.log(err);
   });

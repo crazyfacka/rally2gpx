@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/crazyfacka/rally2gpx#readme",
   "dependencies": {
+    "inquirer": "^7.0.4",
     "jsdom": "^16.0.1"
   },
   "devDependencies": {
