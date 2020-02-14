@@ -83,8 +83,7 @@ const generateGPX = function (d) {
     desc: `WRC track extracted for stage ${d.fullName}`,
     author: new Person({
       name: 'crazyfacka'
-    }),
-    time: `${new Date()}`
+    })
   }));
 
   gpxData.setSegmentPoints(points);
