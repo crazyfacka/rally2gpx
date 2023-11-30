@@ -1,6 +1,6 @@
 const fs = require('fs');
 const jsdom = require('jsdom');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
 const inquirer = require('inquirer');
 const { buildGPX, BaseBuilder } = require('gpx-builder');
 
@@ -9,6 +9,8 @@ const { Point, Metadata, Person } = BaseBuilder.MODELS;
 
 const virtualConsole = new jsdom.VirtualConsole();
 virtualConsole.on('error', (err) => { console.log(err); });
+
+puppeteer.use(require('puppeteer-extra-plugin-stealth')());
 
 /* AUX FUNCTIONS */
 
@@ -118,29 +120,22 @@ const generateGPX = function (d) {
 /* THE MACHINE */
 
 async function scrapePage (url) {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
 
   await page.setViewport({ width: 1080, height: 1024 });
   await page.goto(url);
-
-  console.log(await browser.userAgent());
 
   // cc.acceptCategory('all');
 
   await page.waitForSelector('.cm__body');
   await page.click('.cm__btn >>> ::-p-text(Accept All)');
 
-  console.log(3);
-
   await page.waitForSelector('.leaflet-control-container');
-
-  console.log(4);
+  await page.waitForNetworkIdle();  
+  await page.waitForFunction(`window?.sl?.leaflet?.data?.storage?.stages`);
 
   const htmlContent = await page.content();
-
-  console.log(htmlContent);
-
   const dom = new JSDOM(htmlContent, {
     url: url,
     referrer: url,
@@ -164,13 +159,10 @@ if (args.length !== 1) {
 
 console.log(`Downloading and parsing data from '${args[0]}'`);
 
-scrapePage(args[0]).then(
-  dom => checkForData(dom)
-).then(
-  data => stagePicker(data)
-).then(
-  stage => generateGPX(stage)
-).catch(err => {
+scrapePage(args[0]).then(dom => checkForData(dom))
+.then(data => stagePicker(data))
+.then(stage => generateGPX(stage))
+.catch(err => {
   console.log(err);
 });
 
