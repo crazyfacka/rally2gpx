@@ -1,5 +1,6 @@
 const fs = require('fs');
 const jsdom = require('jsdom');
+const puppeteer = require('puppeteer');
 const inquirer = require('inquirer');
 const { buildGPX, BaseBuilder } = require('gpx-builder');
 
@@ -116,6 +117,45 @@ const generateGPX = function (d) {
 
 /* THE MACHINE */
 
+async function scrapePage (url) {
+  const browser = await puppeteer.launch({ headless: false });
+  const page = await browser.newPage();
+
+  await page.setViewport({ width: 1080, height: 1024 });
+  await page.goto(url);
+
+  console.log(await browser.userAgent());
+
+  // cc.acceptCategory('all');
+
+  await page.waitForSelector('.cm__body');
+  await page.click('.cm__btn >>> ::-p-text(Accept All)');
+
+  console.log(3);
+
+  await page.waitForSelector('.leaflet-control-container');
+
+  console.log(4);
+
+  const htmlContent = await page.content();
+
+  console.log(htmlContent);
+
+  const dom = new JSDOM(htmlContent, {
+    url: url,
+    referrer: url,
+    includeNodeLocations: true,
+    resources: 'usable',
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole
+  });
+
+  await browser.close();
+
+  return dom;
+}
+
 const args = process.argv.slice(2);
 if (args.length !== 1) {
   showHelp();
@@ -124,6 +164,17 @@ if (args.length !== 1) {
 
 console.log(`Downloading and parsing data from '${args[0]}'`);
 
+scrapePage(args[0]).then(
+  dom => checkForData(dom)
+).then(
+  data => stagePicker(data)
+).then(
+  stage => generateGPX(stage)
+).catch(err => {
+  console.log(err);
+});
+
+/*
 JSDOM.fromURL(args[0], {
   includeNodeLocations: true,
   resources: 'usable',
@@ -136,3 +187,4 @@ JSDOM.fromURL(args[0], {
   .catch(err => {
     console.log(err);
   });
+*/
