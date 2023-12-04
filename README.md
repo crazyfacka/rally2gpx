@@ -2,7 +2,7 @@
 Take rally stages and export them to GPX
 
 ```
-$ docker run --rm -it -v ./data:/app/data crazyfacka/rally2gpx https://www.rally-maps.com/Rally-de-Portugal-2019
+$ docker run --rm -it --init --cap-add=SYS_ADMIN -v ./data:/app/data crazyfacka/rally2gpx https://www.rally-maps.com/Rally-de-Portugal-2019
 
 =====================================================================
 
