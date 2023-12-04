@@ -1,14 +1,8 @@
 const fs = require('fs');
-const jsdom = require('jsdom');
 const puppeteer = require('puppeteer-extra');
 const inquirer = require('inquirer');
 const { buildGPX, BaseBuilder } = require('gpx-builder');
-
-const { JSDOM } = jsdom;
 const { Point, Metadata, Person } = BaseBuilder.MODELS;
-
-const virtualConsole = new jsdom.VirtualConsole();
-virtualConsole.on('error', (err) => { console.log(err); });
 
 puppeteer.use(require('puppeteer-extra-plugin-stealth')());
 
@@ -19,71 +13,31 @@ const showHelp = function () {
   console.log(`Usage: ${path.basename(process.argv[0])} ${path.basename(process.argv[1])} URL`);
 };
 
-const checkForData = function (dom) {
+const stagePicker = function (stages) {
   return new Promise((resolve, reject) => {
-    let count = 0;
-    const check = setInterval(function (w) {
-      count++;
-      if (typeof w.sl !== 'undefined') {
-        if (typeof w.sl.leaflet !== 'undefined') {
-          console.log(`Found ${w.sl.leaflet.data.storage.stages.length} tracks`);
-          clearInterval(check);
-          resolve(w.sl.leaflet);
-        }
-      }
-
-      if (count > 10) {
-        clearInterval(check);
-        reject(new Error('Timed out waiting for resources'));
-      }
-    }, 1000, dom.window);
-  });
-};
-
-const stagePicker = function (d) {
-  return new Promise((resolve, reject) => {
-    const stages = d.data.storage.stages;
-    const choices = [];
-
-    for (let i = 0; i < stages.length; i++) {
-      choices[i] = {
-        value: i,
-        name: stages[i].fullName,
-        short: stages[i].fullName
-      };
-    }
-
     inquirer.prompt([
       {
         type: 'list',
         name: 'stage',
         message: 'What stage do you wish to generate the GPX',
-        choices: choices,
+        choices: stages,
         default: 0
       }
     ]).then(answers => resolve(stages[answers.stage]));
   });
 };
 
-const generateGPX = function (d) {
+const generateGPX = function (stage) {
   const points = [];
   const gpxData = new BaseBuilder();
 
-  let coordinates;
-
-  for (let i = 0; i < d.geometries.length; i++) {
-    if (d.geometries[i].type === 'SL') {
-      coordinates = d.geometries[i].geometry.coordinates;
-    }
-  }
-
-  for (let i = 0; i < coordinates.length; i++) {
-    points.push(new Point(coordinates[i][1], coordinates[i][0]));
+  for (let i = 0; i < stage.coordinates.length; i++) {
+    points.push(new Point(stage.coordinates[i][1], stage.coordinates[i][0]));
   }
 
   gpxData.setMetadata(new Metadata({
-    name: d.name,
-    desc: `WRC track extracted for stage ${d.fullName}`,
+    name: stage.short,
+    desc: `WRC track extracted for stage ${stage.name}`,
     author: new Person({
       name: 'crazyfacka'
     })
@@ -96,7 +50,7 @@ const generateGPX = function (d) {
       type: 'input',
       name: 'filename',
       message: 'Output GPX filename',
-      default: `${d.name.toLowerCase().replace(/ /gi, '_')}.gpx`,
+      default: `${stage.short.toLowerCase().replace(/ /gi, '_')}.gpx`,
       filter: (input) => { return input.slice(-4) === '.gpx' ? input.toLowerCase().replace(/ /gi, '_') : `${input.toLowerCase().replace(/ /gi, '_')}.gpx`; }
     }
   ]).then(answers => {
@@ -132,23 +86,35 @@ async function scrapePage (url) {
   await page.click('.cm__btn >>> ::-p-text(Accept All)');
 
   await page.waitForSelector('.leaflet-control-container');
-  await page.waitForNetworkIdle();  
-  await page.waitForFunction(`window?.sl?.leaflet?.data?.storage?.stages`);
+  await page.waitForNetworkIdle();
+  await page.waitForFunction('window?.sl?.leaflet?.data?.storage?.stages');
 
-  const htmlContent = await page.content();
-  const dom = new JSDOM(htmlContent, {
-    url: url,
-    referrer: url,
-    includeNodeLocations: true,
-    resources: 'usable',
-    runScripts: 'dangerously',
-    pretendToBeVisual: true,
-    virtualConsole
+  const stages = await page.evaluate(() => {
+    function flattenStages () {
+      const simpleStages = [];
+      for (let i = 0; i < sl.leaflet.data.storage.stages.length; i++) {
+        const curStage = sl.leaflet.data.storage.stages[i];
+        let coordinates;
+        for (let j = 0; j < curStage.geometries.length; j++) {
+          if (curStage.geometries[j].type === 'SL') {
+            coordinates = curStage.geometries[j].geometry.coordinates;
+          }
+        }
+        simpleStages[i] = {
+          value: i,
+          name: curStage.fullName,
+          short: curStage.name,
+          coordinates: coordinates
+        };
+      }
+      return simpleStages;
+    }
+    return flattenStages();
   });
 
   await browser.close();
 
-  return dom;
+  return stages;
 }
 
 const args = process.argv.slice(2);
@@ -159,24 +125,9 @@ if (args.length !== 1) {
 
 console.log(`Downloading and parsing data from '${args[0]}'`);
 
-scrapePage(args[0]).then(dom => checkForData(dom))
-.then(data => stagePicker(data))
-.then(stage => generateGPX(stage))
-.catch(err => {
-  console.log(err);
-});
-
-/*
-JSDOM.fromURL(args[0], {
-  includeNodeLocations: true,
-  resources: 'usable',
-  runScripts: 'dangerously',
-  pretendToBeVisual: true,
-  virtualConsole
-}).then(dom => checkForData(dom))
-  .then(data => stagePicker(data))
+scrapePage(args[0])
+  .then(stages => stagePicker(stages))
   .then(stage => generateGPX(stage))
   .catch(err => {
     console.log(err);
   });
-*/
