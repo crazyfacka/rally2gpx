@@ -1,6 +1,6 @@
 {
   "name": "rally2gpx",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Convert coordinates from Rally web stuff to GPX",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,6 @@
   "dependencies": {
     "gpx-builder": "^2.2.1",
     "inquirer": "^7.0.4",
-    "jsdom": "^16.0.1",
     "puppeteer": "^21.5.2",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
