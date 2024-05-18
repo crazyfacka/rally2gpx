@@ -96,7 +96,7 @@ async function scrapePage (url) {
         const curStage = sl.leaflet.data.storage.stages[i];
         let coordinates;
         for (let j = 0; j < curStage.geometries.length; j++) {
-          if (curStage.geometries[j].type === 'SL') {
+          if (curStage.geometries[j].type === 'SL' || curStage.geometries[j].type === 'PL') {
             coordinates = curStage.geometries[j].geometry.coordinates;
           }
         }
