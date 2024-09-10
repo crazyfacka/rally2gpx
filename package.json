@@ -19,7 +19,7 @@
   "dependencies": {
     "gpx-builder": "^2.2.1",
     "inquirer": "^7.0.4",
-    "puppeteer": "^21.5.2",
+    "puppeteer": "^23.3.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
