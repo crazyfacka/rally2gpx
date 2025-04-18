@@ -85,16 +85,10 @@ async function scrapePage (url) {
   // cc.acceptCategory('all');
 
   try {
-    // Wait up to 5 seconds for the selector to appear
     await page.waitForSelector('.fc-cta-consent', { timeout: 5000 });
-
-    // If it appears, click it
     await page.click('.fc-cta-consent');
-    console.log('Clicked consent button');
-  } catch (e) {
-    // If the selector doesn't appear, skip it
-    console.log('Consent button not found, moving on');
-  }
+  } catch (e) { }
+
   await page.waitForSelector('.cm__body');
   await page.click('.cm__btn >>> ::-p-text(Accept All)');
 
