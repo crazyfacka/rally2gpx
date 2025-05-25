@@ -17,58 +17,73 @@ const stagePicker = function (stages) {
   return new Promise((resolve, reject) => {
     inquirer.prompt([
       {
-        type: 'list',
+        type: 'checkbox',
         name: 'stage',
         message: 'What stage do you wish to generate the GPX',
         choices: stages,
-        default: 0
+        default: -1
       }
-    ]).then(answers => resolve(stages[answers.stage]));
+    ]).then(answers => resolve({stages: stages, selected: answers.stage}));
   });
 };
 
-const generateGPX = function (stage) {
-  const points = [];
-  const gpxData = new BaseBuilder();
 
-  for (let i = 0; i < stage.coordinates.length; i++) {
-    points.push(new Point(stage.coordinates[i][1], stage.coordinates[i][0]));
+
+const generateGPX = function (selection) {
+  const stages = selection.stages.filter((value, index, vals) => selection.selected.includes(value.value));
+  
+  function processNextStage() {
+    if(stages.length === 0) return Promise.resolve();
+    const stage = stages.pop();
+    const points = [];
+    const gpxData = new BaseBuilder();
+  
+    for (let i = 0; i < stage.coordinates.length; i++) {
+      points.push(new Point(stage.coordinates[i][1], stage.coordinates[i][0]));
+    }
+  
+    gpxData.setMetadata(new Metadata({
+      name: stage.short,
+      desc: `WRC track extracted for stage ${stage.name}`,
+      author: new Person({
+        name: 'crazyfacka'
+      })
+    }));
+  
+    gpxData.setSegmentPoints(points);
+  
+    return inquirer.prompt([
+      {
+        type: 'input',
+        name: 'filename',
+        message: 'Output GPX filename',
+        default: `${stage.short.toLowerCase().replace(/ /gi, '_')}.gpx`,
+        filter: (input) => { return input.slice(-4) === '.gpx' ? input.toLowerCase().replace(/ /gi, '_') : `${input.toLowerCase().replace(/ /gi, '_')}.gpx`; }
+      }
+    ]).then(answers => {
+      const dir = './data';
+  
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+      }
+  
+      fs.writeFileSync(`data/${answers.filename}`, buildGPX(gpxData.toObject()), 'utf8', (err) => {
+        if (err) {
+          console.log(`Error writing GPX data to ${answers.filename}`);
+          process.exit(1);
+        }
+  
+        console.log(`${answers.filename} has been saved`);
+      });
+    })
+    .then(() => processNextStage())
+    .catch((err) => {
+      console.error('An error occurred:', err);
+      process.exit(1);
+    });
   }
 
-  gpxData.setMetadata(new Metadata({
-    name: stage.short,
-    desc: `WRC track extracted for stage ${stage.name}`,
-    author: new Person({
-      name: 'crazyfacka'
-    })
-  }));
-
-  gpxData.setSegmentPoints(points);
-
-  inquirer.prompt([
-    {
-      type: 'input',
-      name: 'filename',
-      message: 'Output GPX filename',
-      default: `${stage.short.toLowerCase().replace(/ /gi, '_')}.gpx`,
-      filter: (input) => { return input.slice(-4) === '.gpx' ? input.toLowerCase().replace(/ /gi, '_') : `${input.toLowerCase().replace(/ /gi, '_')}.gpx`; }
-    }
-  ]).then(answers => {
-    const dir = './data';
-
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
-    }
-
-    fs.writeFile(`data/${answers.filename}`, buildGPX(gpxData.toObject()), 'utf8', (err) => {
-      if (err) {
-        console.log(`Error writing GPX data to ${answers.filename}`);
-        process.exit(1);
-      }
-
-      console.log(`${answers.filename} has been saved`);
-    });
-  });
+  processNextStage();
 };
 
 /* THE MACHINE */
