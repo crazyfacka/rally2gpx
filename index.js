@@ -34,24 +34,25 @@ const generateGPX = function (selection) {
     if (stages.length === 0) {
       return Promise.resolve();
     }
-
     const stage = stages.shift();
-    const points = [];
-    const gpxData = new BaseBuilder();
-
-    for (let i = 0; i < stage.coordinates.length; i++) {
-      points.push(new Point(stage.coordinates[i][1], stage.coordinates[i][0]));
-    }
-
-    gpxData.setMetadata(new Metadata({
-      name: stage.short,
+    const gpxData = new BaseBuilder().setMetadata(new Metadata({
+      name: stage.short ? stage.short : stage.name,
       desc: `WRC track extracted for stage ${stage.name}`,
       author: new Person({
         name: 'crazyfacka'
       })
     }));
+    if (stage.coordinates.length === 1) {
+      // for stages as polygons
+      gpxData.setWayPoints([new Point(stage.coordinates[0][1], stage.coordinates[0][0])]);
+    } else {
+      const points = [];
 
-    gpxData.setSegmentPoints(points);
+      for (let i = 0; i < stage.coordinates.length; i++) {
+        points.push(new Point(stage.coordinates[i][1], stage.coordinates[i][0]));
+      }
+      gpxData.setSegmentPoints(points);
+    }
 
     return inquirer.prompt([
       {
@@ -117,21 +118,55 @@ async function scrapePage (url) {
       const simpleStages = [];
       for (let i = 0; i < sl.leaflet.data.storage.stages.length; i++) {
         const curStage = sl.leaflet.data.storage.stages[i];
-        let coordinates;
-        for (let j = 0; j < curStage.geometries.length; j++) {
-          if (curStage.geometries[j].type === 'SL' || curStage.geometries[j].type === 'PL') {
-            coordinates = curStage.geometries[j].geometry.coordinates;
-          }
-        }
-        simpleStages[i] = {
+        const stage = {
           value: i,
           name: curStage.fullName,
           short: curStage.name,
-          coordinates: coordinates
+          coordinates: []
         };
+
+        for (let j = 0; j < curStage.geometries.length; j++) {
+          // for stages as polygons
+          if (curStage.geometries[j].type === "PG") {
+            stage.coordinates = [getPolygonCentroid(curStage.geometries[j].geometry.coordinates[0])];
+            simpleStages[i] = stage;
+            break;
+          }
+
+          if (curStage.geometries[j].type === 'SL' || curStage.geometries[j].type === 'PL') {
+            stage.coordinates = curStage.geometries[j].geometry.coordinates;
+          }
+        }
+
+        simpleStages[i] = stage;
       }
       return simpleStages;
     }
+
+    function getPolygonCentroid (coords) {
+      let area = 0;
+      let x = 0;
+      let y = 0;
+
+      const points = coords.map(p => ({ x: p[0], y: p[1] }));
+      const len = points.length;
+
+      for (let i = 0; i < len - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const a = p1.x * p2.y - p2.x * p1.y;
+        area += a;
+        x += (p1.x + p2.x) * a;
+        y += (p1.y + p2.y) * a;
+      }
+
+      area /= 2;
+      x /= (6 * area);
+      y /= (6 * area);
+
+      return [x, y];
+    }
+
     return flattenStages();
   });
 
