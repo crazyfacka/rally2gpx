@@ -1,6 +1,6 @@
 const fs = require('fs');
 const puppeteer = require('puppeteer-extra');
-const inquirer = require('inquirer');
+const inquirer = require('inquirer').default;
 const { buildGPX, BaseBuilder } = require('gpx-builder');
 const { Point, Metadata, Person } = BaseBuilder.MODELS;
 
