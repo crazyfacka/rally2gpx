@@ -90,8 +90,13 @@ const generateGPX = function (selection) {
 /* THE MACHINE */
 
 async function scrapePage (url) {
+  const puppeteerArgs = process.env.PUPPETEER_ARGS 
+    ? process.env.PUPPETEER_ARGS.split(',') 
+    : [];
+
   const browser = await puppeteer.launch({
-    headless: 'new'
+    headless: 'new',
+    ...(puppeteerArgs.length > 0 && { args: puppeteerArgs })
   });
   const page = await browser.newPage();
 
